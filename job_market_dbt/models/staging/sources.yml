@@ -1,0 +1,15 @@
+version: 2
+
+sources:
+  - name: raw
+    database: JOB_MARKET
+    schema: RAW
+    tables:
+      - name: adzuna_jobs
+        description: "Vagas extraídas via Adzuna API (Brasil, mercado local)"
+
+      - name: remoteok_jobs
+        description: "Vagas extraídas via RemoteOK API (remoto, global)"
+
+      - name: wwr_jobs
+        description: "Vagas extraídas via We Work Remotely RSS feeds (remoto, global)"

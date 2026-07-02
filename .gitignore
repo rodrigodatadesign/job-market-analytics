@@ -1,0 +1,12 @@
+.env
+__pycache__/
+*.pyc
+data/raw/**
+.venv/
+venv/
+**/profiles.yml
+**/secrets.yml
+target/
+dbt_packages/
+node_modules/
+logs/
