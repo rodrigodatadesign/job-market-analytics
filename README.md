@@ -1,71 +1,91 @@
 # Job Market Analytics — Brazil Tech Jobs (BI / Data / Product Design)
 
-Pipeline de extração de vagas de três fontes (Adzuna, RemoteOK, We Work Remotely)
-para análise comparativa de skills, salários e tendências no mercado de
-BI/Dados/Product Design — Brasil local vs. remoto global.
+End-to-end data pipeline for the tech job market: job listing extraction from three sources (Adzuna, RemoteOK, We Work Remotely), analytical modeling in Snowflake + dbt, a custom FastAPI backend, and an interactive dashboard — for comparative analysis of skills, salaries, and trends in the BI/Data/Product Design market, Brazil local vs. global remote.
 
 ## Setup
 
 ```bash
-# 1. Criar ambiente virtual (recomendado)
+# 1. Create virtual environment
 python -m venv venv
 source venv/bin/activate   # Windows: venv\Scripts\activate
 
-# 2. Instalar dependências
+# 2. Install dependencies
 pip install -r requirements.txt
 
-# 3. Configurar credenciais
+# 3. Set up credentials
 cp .env.example .env
-# edite o .env e cole seu ADZUNA_APP_ID e ADZUNA_APP_KEY
-# (gratuito em https://developer.adzuna.com/signup)
+# edit .env and paste your ADZUNA_APP_ID and ADZUNA_APP_KEY
+# (free at https://developer.adzuna.com/signup)
 ```
 
-## Rodando a extração
+## Running the extraction
 
 ```bash
-# RemoteOK — não precisa de credenciais
+# RemoteOK — no credentials required
 python extraction/remoteok_extract.py
 
-# We Work Remotely — não precisa de credenciais
+# We Work Remotely — no credentials required
 python extraction/wwr_extract.py
 
-# Adzuna — precisa do .env configurado
+# Adzuna — requires .env configured
 python extraction/adzuna_extract.py
 ```
 
-Cada script salva um JSON em `data/raw/<fonte>/` com timestamp no nome do
-arquivo, preservando o payload original de cada vaga.
+Each script saves a timestamped JSON file in `data/raw/<source>/`, preserving the original payload for each job listing.
 
-## Fontes
+## Modeling (dbt)
 
-| Fonte | Tipo | Auth | Cobertura |
+Raw data is loaded into Snowflake and transformed via dbt across three layers:
+
+- **staging** — per-source normalization (`stg_adzuna`, `stg_remoteok`, `stg_wwr`)
+- **intermediate** — cross-source unification (`int_jobs_unified`)
+- **marts** — final analytical tables consumed by the dashboard (`fct_jobs`, `fct_jobs_skills`)
+
+```bash
+cd job_market_dbt
+dbt run
+```
+
+## Dashboard
+
+Three-page interface (Overview, Skills, Salaries), with filters connected directly to a custom FastAPI backend, updated automatically. Deployed to production via Docker Swarm + Traefik.
+
+## Sources
+
+| Source | Type | Auth | Coverage |
 |---|---|---|---|
-| [Adzuna](https://developer.adzuna.com) | REST JSON | app_id + app_key (grátis) | Brasil, mercado local |
-| [RemoteOK](https://remoteok.com/api) | REST JSON | Nenhuma | Remoto, global, tech |
-| [We Work Remotely](https://weworkremotely.com/remote-job-rss-feed) | RSS/XML | Nenhuma | Remoto, global, curado |
+| [Adzuna](https://developer.adzuna.com) | REST JSON | app_id + app_key (free) | Brazil, local market |
+| [RemoteOK](https://remoteok.com/api) | REST JSON | None | Remote, global, tech |
+| [We Work Remotely](https://weworkremotely.com/remote-job-rss-feed) | RSS/XML | None | Remote, global, curated |
 
-**Atenção a termos de uso:**
-- RemoteOK exige menção como fonte e link direto (sem redirect) para a vaga original.
-- We Work Remotely: feeds públicos de uso livre conforme a própria documentação.
-- Adzuna: tier gratuito com limite de requisições (25/min); URLs de redirect já
-  incluem atribuição (`utm_source`).
+**Details:**
+- RemoteOK requires attribution as the source and a direct (non-redirect) link to the original job listing.
+- We Work Remotely: public feeds, free to use per their own documentation.
+- Adzuna: free tier with a request limit (25/min); redirect URLs already include attribution (`utm_source`).
 
-## Próximos passos (pipeline completo)
+## Pipeline
 
-1. ✅ Extração (Python) — scripts neste repositório
-2. ⬜ Carga em Snowflake (camada `raw`)
-3. ⬜ Transformação via dbt (`staging` → `intermediate` → `marts`)
-4. ⬜ Consumo em Power BI
+1. ✅ Extraction (Python) — `extraction/`
+2. ✅ Load into Snowflake (`raw` layer)
+3. ✅ Transformation via dbt (`staging` → `intermediate` → `marts`) — `job_market_dbt/`
+4. ✅ Custom FastAPI backend, serving data in real time
+5. ✅ Interactive dashboard (Overview, Skills, Salaries) — `dashboard/`
 
-## Estrutura do projeto
-
+## Project structure
 ```
 job_market_project/
 ├── extraction/
 │   ├── adzuna_extract.py
 │   ├── remoteok_extract.py
 │   └── wwr_extract.py
-├── data/raw/           # gerado ao rodar os scripts (ignorado pelo git)
+├── job_market_dbt/
+│   └── models/
+│       ├── staging/
+│       ├── intermediate/
+│       └── marts/
+├── dashboard/
+│   └── novo/            # front-end (index, skills, salarios, assets, js)
+├── data/raw/             # generated when running the scripts (git-ignored)
 ├── requirements.txt
 ├── .env.example
 └── .gitignore
